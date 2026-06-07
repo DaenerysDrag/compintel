@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ipc } from "../lib/ipc";
-import type { RunLogRow } from "../lib/types";
 import { Card, Pill } from "../components/Card";
+import { useAgentData } from "../lib/useAgentData";
+import { useSettingsStore } from "../store/settingsStore";
 
 function emailVariant(s: string): "green" | "red" | "default" {
   if (s.includes("✅")) return "green";
@@ -11,22 +11,10 @@ function emailVariant(s: string): "green" | "red" | "default" {
 }
 
 export default function History() {
-  const [rows, setRows] = useState<RunLogRow[]>([]);
+  const { runLog: rows, loading, error, fromCache, refresh } = useAgentData();
+  const mode = useSettingsStore((s) => s.mode);
+  const isViewer = mode === "viewer";
   const [filter, setFilter] = useState<string>("all");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    ipc.readRunLog()
-      .then((r) => {
-        setRows(r);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(String(err));
-        setLoading(false);
-      });
-  }, []);
 
   const competitors = useMemo(() => {
     const set = new Set(rows.map((r) => r.competitor));
@@ -39,8 +27,20 @@ export default function History() {
   const totalFound = filtered.reduce((s, r) => s + r.found, 0);
   const totalBlocked = filtered.reduce((s, r) => s + r.blocked, 0);
 
-  if (loading) return <div className="text-text-dim">Loading…</div>;
-  if (error) return <div className="text-red">Error: {error}</div>;
+  if (loading && rows.length === 0) return <div className="text-text-dim">Loading…</div>;
+  if (error && rows.length === 0) {
+    return (
+      <div className="text-red">
+        Error: {error}
+        <button
+          onClick={() => void refresh()}
+          className="ml-3 underline text-cyan text-sm"
+        >
+          retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-auto">
@@ -48,10 +48,18 @@ export default function History() {
         <div>
           <h1 className="text-2xl font-bold text-white">History</h1>
           <p className="text-sm text-text-dim mt-1">
-            {rows.length} run{rows.length === 1 ? "" : "s"} recorded in Agent Run Log
+            {rows.length} run{rows.length === 1 ? "" : "s"} recorded
+            {isViewer && fromCache && <span className="ml-2 text-yellow">· cached</span>}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => void refresh()}
+            disabled={loading}
+            className="text-xs px-3 py-1.5 rounded border border-cyan/30 text-cyan hover:bg-cyan/5 transition-colors disabled:opacity-40"
+          >
+            {loading ? "…" : "↻"}
+          </button>
           {competitors.map((c) => (
             <button
               key={c}

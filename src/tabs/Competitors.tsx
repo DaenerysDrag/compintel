@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ipc } from "../lib/ipc";
 import type { Competitor } from "../lib/types";
 import { Card, Pill } from "../components/Card";
+import { useAgentData } from "../lib/useAgentData";
+import { useSettingsStore } from "../store/settingsStore";
 
 interface UploadState {
   status: "idle" | "uploading" | "success" | "error";
@@ -16,7 +18,15 @@ function ageColor(days: number | null, warnThreshold: number): "green" | "yellow
   return "green";
 }
 
-function CompetitorCard({ c, onUploadComplete }: { c: Competitor; onUploadComplete: () => void }) {
+function CompetitorCard({
+  c,
+  onUploadComplete,
+  isViewer,
+}: {
+  c: Competitor;
+  onUploadComplete: () => void;
+  isViewer: boolean;
+}) {
   const accent = c.isExhausted ? "red" : c.hasGapAnalysis ? "green" : "yellow";
   const [upload, setUpload] = useState<UploadState>({ status: "idle" });
 
@@ -116,25 +126,30 @@ function CompetitorCard({ c, onUploadComplete }: { c: Competitor; onUploadComple
         </div>
       </div>
 
-      <div className="flex gap-2 pt-3 border-t border-white/5 flex-wrap">
-        <button
-          onClick={() => ipc.openPath(c.folder).catch(console.error)}
-          className="text-xs px-3 py-1.5 rounded border border-cyan/30 text-cyan hover:bg-cyan/10 transition"
-        >
-          Open folder
-        </button>
-        <button
-          onClick={handleUpload}
-          disabled={upload.status === "uploading"}
-          className={`text-xs px-3 py-1.5 rounded border transition ${
-            upload.status === "uploading"
-              ? "border-white/10 text-text-dim cursor-wait"
-              : "border-purple/40 text-purple hover:bg-purple/10"
-          }`}
-        >
-          {upload.status === "uploading" ? "Uploading…" : "Upload SimilarWeb file"}
-        </button>
-      </div>
+      {/* Operator-only actions. Viewer mode has no local folder + no API to mutate. */}
+      {!isViewer && (
+        <div className="flex gap-2 pt-3 border-t border-white/5 flex-wrap">
+          {c.folder && (
+            <button
+              onClick={() => ipc.openPath(c.folder).catch(console.error)}
+              className="text-xs px-3 py-1.5 rounded border border-cyan/30 text-cyan hover:bg-cyan/10 transition"
+            >
+              Open folder
+            </button>
+          )}
+          <button
+            onClick={handleUpload}
+            disabled={upload.status === "uploading"}
+            className={`text-xs px-3 py-1.5 rounded border transition ${
+              upload.status === "uploading"
+                ? "border-white/10 text-text-dim cursor-wait"
+                : "border-purple/40 text-purple hover:bg-purple/10"
+            }`}
+          >
+            {upload.status === "uploading" ? "Uploading…" : "Upload SimilarWeb file"}
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {upload.status !== "idle" && upload.message && (
@@ -250,28 +265,28 @@ function AddCompetitorForm({
 // ── Top-level Competitors tab ─────────────────────────────────────────────────
 
 export default function Competitors() {
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { competitors, loading, error, fromCache, refresh } = useAgentData();
+  const mode = useSettingsStore((s) => s.mode);
+  const isViewer = mode === "viewer";
   const [adding, setAdding] = useState(false);
   const [justCreated, setJustCreated] = useState<string | null>(null);
 
-  const refresh = () => {
-    ipc.listCompetitors()
-      .then((c) => {
-        setCompetitors(c);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(String(err));
-        setLoading(false);
-      });
-  };
-
-  useEffect(refresh, []);
-
-  if (loading) return <div className="text-text-dim">Loading…</div>;
-  if (error) return <div className="text-red">Error: {error}</div>;
+  if (loading && competitors.length === 0) {
+    return <div className="text-text-dim">Loading…</div>;
+  }
+  if (error && competitors.length === 0) {
+    return (
+      <div className="text-red">
+        Error: {error}
+        <button
+          onClick={() => void refresh()}
+          className="ml-3 underline text-cyan text-sm"
+        >
+          retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-auto">
@@ -279,22 +294,36 @@ export default function Competitors() {
         <div>
           <h1 className="text-2xl font-bold text-white">Competitors</h1>
           <p className="text-sm text-text-dim mt-1">
-            {competitors.length} competitor folder{competitors.length === 1 ? "" : "s"} detected.
+            {competitors.length} competitor{competitors.length === 1 ? "" : "s"}
+            {isViewer && " · viewer mode (read-only)"}
+            {isViewer && fromCache && (
+              <span className="ml-2 text-yellow">· showing cached snapshot</span>
+            )}
           </p>
         </div>
-        {!adding && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setAdding(true)}
-            className="px-4 py-2 rounded-lg bg-cyan/10 border border-cyan/40 text-cyan text-sm font-semibold hover:bg-cyan/20 transition shadow-glow-cyan"
+            onClick={() => void refresh()}
+            disabled={loading}
+            className="text-xs px-3 py-1.5 rounded border border-cyan/30 text-cyan hover:bg-cyan/5 transition-colors disabled:opacity-40"
           >
-            + Add Competitor
+            {loading ? "Refreshing…" : "↻ Refresh"}
           </button>
-        )}
+          {/* Add Competitor mutates the local filesystem — hidden in viewer mode. */}
+          {!isViewer && !adding && (
+            <button
+              onClick={() => setAdding(true)}
+              className="px-4 py-2 rounded-lg bg-cyan/10 border border-cyan/40 text-cyan text-sm font-semibold hover:bg-cyan/20 transition shadow-glow-cyan"
+            >
+              + Add Competitor
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Inline add-competitor form */}
+      {/* Inline add-competitor form — operator only */}
       <AnimatePresence>
-        {adding && (
+        {!isViewer && adding && (
           <motion.div
             initial={{ opacity: 0, y: -8, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
@@ -305,7 +334,7 @@ export default function Competitors() {
               onCreated={(name) => {
                 setAdding(false);
                 setJustCreated(name);
-                refresh();
+                void refresh();
                 setTimeout(() => setJustCreated(null), 4000);
               }}
               onCancel={() => setAdding(false)}
@@ -331,7 +360,12 @@ export default function Competitors() {
 
       <div className="grid grid-cols-2 gap-4">
         {competitors.map((c) => (
-          <CompetitorCard key={c.slug} c={c} onUploadComplete={refresh} />
+          <CompetitorCard
+            key={c.slug}
+            c={c}
+            isViewer={isViewer}
+            onUploadComplete={() => void refresh()}
+          />
         ))}
       </div>
 
@@ -340,7 +374,9 @@ export default function Competitors() {
           <div className="text-center py-8 text-text-dim">
             <div className="text-lg mb-1">No competitors yet</div>
             <div className="text-sm">
-              Run <code className="bg-bg-2 px-1.5 py-0.5 rounded text-cyan">python3 run_agent.py --competitor "Name"</code> to create the first competitor folder.
+              {isViewer
+                ? "The snapshot is empty — confirm the agent has run today or check the snapshot URL in Settings."
+                : <>Run <code className="bg-bg-2 px-1.5 py-0.5 rounded text-cyan">python3 run_agent.py --competitor "Name"</code> to create the first competitor folder.</>}
             </div>
           </div>
         </Card>

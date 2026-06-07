@@ -14,7 +14,7 @@ Operator mode (running the agent locally) is documented at the end.
 ## 1. Download
 
 Grab the installer for your platform from the
-[Releases page](https://github.com/karanmakol/compintel/releases).
+[Releases page](https://github.com/DaenerysDrag/compintel/releases).
 
 | Platform | File | Size |
 |---|---|---|
@@ -122,6 +122,7 @@ Your snapshot URL, mode, and project folder persist across updates.
 
 Found a bug, want a feature, or have a question? Slack
 **@karan.makol** or file an issue at
-`github.com/karanmakol/compintel/issues`.
+`github.com/DaenerysDrag/compintel/issues` (personal repo — keep
+discussions there, not on the now.gg agent codebase).
 
 — *Compintel team*

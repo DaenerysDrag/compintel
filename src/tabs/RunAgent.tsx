@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ipc } from "../lib/ipc";
 import type { Competitor } from "../lib/types";
 import { Card, Pill } from "../components/Card";
+import { useSettingsStore } from "../store/settingsStore";
 import {
   ElapsedTimer,
   GameStrip,
@@ -274,11 +275,43 @@ function DoneScreen() {
 export default function RunAgent() {
   const running = useRunStore((s) => s.running);
   const done = useRunStore((s) => s.done);
+  const mode = useSettingsStore((s) => s.mode);
+  const setMode = useSettingsStore((s) => s.setMode);
+  const isViewer = mode === "viewer";
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
 
   useEffect(() => {
+    // Skip the listCompetitors call entirely in viewer mode — there's no local
+    // project folder so the Rust command returns an empty list anyway, and we
+    // want to short-circuit before the panel renders.
+    if (isViewer) return;
     ipc.listCompetitors().then(setCompetitors).catch(console.error);
-  }, []);
+  }, [isViewer]);
+
+  // Viewer mode shouldn't normally land here (App.tsx hides the tab), but if
+  // someone deep-links or switches mode mid-session, render a clear nudge
+  // instead of crashing on the missing project folder.
+  if (isViewer) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Card accent="cyan" className="w-[480px] text-center">
+          <div className="text-[10px] tracking-widest text-cyan/80 mb-2">VIEWER MODE</div>
+          <h2 className="text-xl font-bold text-white mb-2">Running the agent requires Operator mode</h2>
+          <p className="text-sm text-text-dim mb-5">
+            You're in read-only viewer mode — the app fetches data from a cloud
+            snapshot. To trigger your own pipeline runs, switch to Operator
+            mode and point the app at your local project folder.
+          </p>
+          <button
+            onClick={() => void setMode("operator")}
+            className="px-5 py-2 rounded-lg bg-green/15 border border-green/50 text-green text-sm font-semibold hover:bg-green/25 transition"
+          >
+            Switch to Operator mode
+          </button>
+        </Card>
+      </div>
+    );
+  }
 
   let phase: "idle" | "running" | "done" = "idle";
   if (running) phase = "running";
