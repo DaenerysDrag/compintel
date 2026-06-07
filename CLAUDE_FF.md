@@ -1,7 +1,7 @@
 # Compintel Frontend — Session Memory
 
-Last updated: 2026-06-07
-Status: V0.2.0 distribution-ready cut complete on local disk. Git repo initialized, initial commit `df2ecbf` on `main`. Not pushed to a remote yet.
+Last updated: 2026-06-07 (afternoon — second session of the day)
+Status: V0.2.0 shipped to GitHub as `DaenerysDrag/compintel` (private). CI building macOS .dmg + Windows .msi installers on tag `v0.2.0`. Run #27091324087 in progress at write time. All 6 tabs now viewer-mode aware (Dashboard + Competitors + History done last and this session; RunAgent has a clear "switch to Operator" guard). Frontend repo lives at: https://github.com/DaenerysDrag/compintel — separate from the office-tied agent codebase, which stays in the now.gg work area.
 
 ---
 
@@ -97,31 +97,38 @@ Operator-only commands (`add_competitor`, `upload_similarweb_file`, `start_agent
 
 ## What's Half-Done — Pick Up Here Next Session
 
-### Immediate: refactor Competitors, History, RunAgent tabs to use `useAgentData`
+### Wait for CI, then publish the draft release
 
-Dashboard is wired. The other three still call `ipc.listCompetitors()` etc. directly. **Operator mode works as-is on those tabs** (existing code path), but **Viewer mode shows empty cards** until they're refactored.
+CI workflow `Release Compintel` (run #27091324087) is currently building on:
+- `macos-latest` → produces `Compintel_0.2.0_x64.dmg`
+- `windows-latest` → produces `Compintel_0.2.0_x64-setup.exe` (NSIS)
 
-Files to update:
-- `src/tabs/Competitors.tsx` — replace `ipc.listCompetitors()` with `useAgentData()`
-- `src/tabs/History.tsx` — replace `ipc.readRunLog()` with `useAgentData()`
-- `src/tabs/RunAgent.tsx` — RunAgent tab is operator-only (already hidden in viewer mode by App.tsx), but should show a "switch to operator mode" message if somehow opened in viewer
+Both jobs run in parallel; total wall-clock typically 10–15 min for the first build (Rust deps compile from scratch — subsequent builds will be much faster due to caching).
 
-This is ~1–2 hours of work, the same pattern Dashboard already uses.
+When CI finishes:
+1. Visit https://github.com/DaenerysDrag/compintel/releases — there will be a **draft** release for `v0.2.0` with both installers attached.
+2. Click **Edit draft** → review the auto-generated release notes → click **Publish release**.
+3. Once published, the Releases page becomes the install URL for testers.
 
-### Then: ship V0.2.0 to first testers
+### Get the snapshot URL working
 
-1. Create GitHub repo (private):
-   ```
-   gh repo create DaenerysDrag/compintel --private --source=. --remote=origin --push
-   ```
-   Or via github.com UI + `git remote add origin <url>` + `git push -u origin main`.
-2. Tag + push to trigger CI:
-   ```
-   git tag v0.2.0 && git push origin v0.2.0
-   ```
-3. Wait ~10 min, publish the draft release from github.com
-4. Get the Drive snapshot URL from a fresh agent run (the next 8 AM IST run will populate it automatically after Part 9 is wired in — already done)
-5. Share Releases page + snapshot URL with 1–2 testers, gather feedback
+Compintel viewer mode needs a populated `compintel-state.json` on Drive to work. As of this commit:
+- `Agent/Scripts/9_state_snapshot.py` exists and is wired into `run_agent.py` (Part 9)
+- **No live snapshot URL exists yet** — Part 9 will run for the first time on the next agent execution (8 AM IST next weekday, or any manual `python3 run_agent.py`)
+- Once it runs, the Drive URL gets logged in the agent's stdout AND saved to `Agent/Scripts/.env` as `COMPINTEL_SNAPSHOT_ID=...`
+
+To bootstrap before the next scheduled run, the user can manually:
+```
+cd "Compitior Analysis/Agent/Scripts" && python3 9_state_snapshot.py
+```
+That writes the local copy + uploads to Drive + prints the public URL. Paste that URL into Compintel → Settings → Snapshot URL.
+
+### Then: ship to first testers
+
+1. Share the URL of the published Release (https://github.com/DaenerysDrag/compintel/releases/tag/v0.2.0) with 1–2 testers (Mac and Windows, ideally one of each)
+2. Share the snapshot URL via DM (don't put it in the release notes; it's not secret but no need to broadcast)
+3. Walk them through `INSTALL.md` if they get stuck on the Gatekeeper/SmartScreen ritual
+4. Gather feedback for V0.3
 
 ---
 
@@ -183,4 +190,5 @@ This is ~1–2 hours of work, the same pattern Dashboard already uses.
 
 | Date | What |
 |---|---|
-| 2026-06-07 | V0.2.0 distribution-ready cut. Tasks 7–14 complete. Git initialized (`df2ecbf` on `main`). Tests + builds all clean. Not yet pushed to remote, not yet built into a tagged installer. Reminded by user to write this memory file; saved a feedback memory ([[feedback-update-memory-each-session]]) so this becomes a habit. |
+| 2026-06-07 (morning) | V0.2.0 distribution-ready cut. Tasks 7–14 complete. Git initialized (`df2ecbf` on `main`). Tests + builds all clean. Not yet pushed to remote, not yet built into a tagged installer. Reminded by user to write this memory file; saved a feedback memory ([[feedback-update-memory-each-session]]) so this becomes a habit. |
+| 2026-06-07 (afternoon) | Wired Competitors + History + RunAgent tabs to `useAgentData` so viewer mode renders uniformly across the app. RunAgent now shows a "switch to Operator" guard in viewer mode. Updated all `karanmakol/compintel` references to `DaenerysDrag/compintel` since user moved this to their personal GitHub. User completed `gh auth login` as DaenerysDrag (had to use Mac Terminal directly — `gh auth login` is interactive and Claude Code's background bash can't handle it). Set per-repo git identity to `DaenerysDrag <177612664+DaenerysDrag@users.noreply.github.com>`, amended the 2 prior commits to use it, created private repo `DaenerysDrag/compintel`, pushed `main` + tag `v0.2.0`. CI run #27091324087 started; will produce `.dmg` + `.msi` as a draft release on the Releases page when complete. |
