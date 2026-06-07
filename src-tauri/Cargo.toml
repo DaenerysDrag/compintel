@@ -1,0 +1,31 @@
+[package]
+name = "compintel"
+version = "0.2.0"
+description = "Compintel — competitive intelligence desktop app"
+authors = ["now.gg / BlueStacks"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "compintel_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+# ureq is a small (~2 MB) blocking HTTP client used by the viewer-mode
+# snapshot fetcher. Chosen over reqwest to keep binary size + transitive
+# deps small for a tool that does ~1 GET request on app launch.
+ureq = { version = "2", features = ["json", "tls"] }
+

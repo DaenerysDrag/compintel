@@ -1,0 +1,86 @@
+name: Release Compintel
+
+# Builds .dmg (macOS) + .msi/.exe (Windows) when a tag like `v0.2.0` is pushed.
+# Drafts a GitHub Release with both installers attached so internal testers
+# can download from one URL regardless of platform.
+#
+# Trigger:    git tag v0.2.0 && git push origin v0.2.0
+# Result:     GitHub Releases page shows draft release with installers
+# Publish:    edit the draft on github.com to publish (gives you a chance to
+#             paste release notes before testers get notified)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:    # manual trigger from the Actions tab for ad-hoc builds
+
+permissions:
+  contents: write       # needed to create the release + upload assets
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          # Lockfile change → new cache key. OS in key so macOS/Windows don't
+          # cross-contaminate caches.
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Skip code signing — internal distribution, signed builds will come later.
+          TAURI_SIGNING_PRIVATE_KEY: ""
+        with:
+          # tagName comes from the pushed tag (e.g., v0.2.0). releaseName is the
+          # human title. Both auto-populate from the tag if left as defaults.
+          tagName: ${{ github.ref_name }}
+          releaseName: "Compintel ${{ github.ref_name }}"
+          releaseBody: |
+            **Compintel ${{ github.ref_name }}** — internal release.
+
+            ### Install
+            - **macOS**: download `.dmg`, drag `Compintel.app` to Applications. First launch: right-click → Open (bypasses Gatekeeper for unsigned builds).
+            - **Windows**: download `.msi`, double-click. SmartScreen may warn — click "More info" → "Run anyway".
+
+            See [INSTALL.md](https://github.com/${{ github.repository }}/blob/main/INSTALL.md) for full setup.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
