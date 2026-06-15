@@ -1,6 +1,7 @@
 name: Release Compintel
 
-# Builds .dmg (macOS) + .msi/.exe (Windows) when a tag like `v0.2.0` is pushed.
+# Builds a universal .dmg (macOS Intel + Apple Silicon) + .exe (Windows) when a
+# tag like `v0.2.0` is pushed.
 # Drafts a GitHub Release with both installers attached so internal testers
 # can download from one URL regardless of platform.
 #
@@ -24,10 +25,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # macOS: build a universal binary so the .dmg runs on BOTH Intel and
+          # Apple Silicon. Requires both rustc targets (added in the toolchain step).
           - platform: "macos-latest"
-            args: ""
+            args: "--target universal-apple-darwin"
+            rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"
           - platform: "windows-latest"
             args: ""
+            rust_targets: ""
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 45
@@ -45,6 +50,8 @@ jobs:
 
       - name: Setup Rust (stable)
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
 
       - name: Cache Cargo registry + target
         uses: actions/cache@v4
@@ -77,8 +84,8 @@ jobs:
             **Compintel ${{ github.ref_name }}** — internal release.
 
             ### Install
-            - **macOS**: download `.dmg`, drag `Compintel.app` to Applications. First launch: right-click → Open (bypasses Gatekeeper for unsigned builds).
-            - **Windows**: download `.msi`, double-click. SmartScreen may warn — click "More info" → "Run anyway".
+            - **macOS** (Intel + Apple Silicon): download the `.dmg`, drag `Compintel.app` to Applications. First launch: right-click → Open (bypasses Gatekeeper for unsigned builds).
+            - **Windows**: download the `-setup.exe`, double-click. SmartScreen may warn — click "More info" → "Run anyway".
 
             See [INSTALL.md](https://github.com/${{ github.repository }}/blob/main/INSTALL.md) for full setup.
           releaseDraft: true

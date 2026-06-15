@@ -18,8 +18,8 @@ Grab the installer for your platform from the
 
 | Platform | File | Size |
 |---|---|---|
-| macOS (Intel / Apple Silicon) | `Compintel_x.x.x_x64.dmg` | ~6 MB |
-| Windows 10 / 11 (64-bit)      | `Compintel_x.x.x_x64-setup.exe` or `.msi` | ~8 MB |
+| macOS (Intel + Apple Silicon, universal) | `Compintel_x.x.x_universal.dmg` | ~10 MB |
+| Windows 10 / 11 (64-bit)      | `Compintel_x.x.x_x64-setup.exe` | ~8 MB |
 
 ---
 
@@ -36,7 +36,7 @@ Grab the installer for your platform from the
 
 ### Windows
 
-1. Double-click the `.msi` (or `setup.exe`).
+1. Double-click the `-setup.exe`.
 2. **First launch only** — Windows SmartScreen will show "Windows protected
    your PC". Click **More info** → **Run anyway**.
 3. The installer copies Compintel to `Program Files` and adds a Start menu
@@ -112,7 +112,7 @@ Download the installer the same way and overwrite the previous install:
 
 - **macOS**: replace `Compintel.app` in Applications. Settings carry over (stored
   in `~/Library/Application Support/com.nowgg.compintel/`).
-- **Windows**: run the new `.msi`. The installer auto-upgrades.
+- **Windows**: run the new `-setup.exe`. The installer auto-upgrades.
 
 Your snapshot URL, mode, and project folder persist across updates.
 
