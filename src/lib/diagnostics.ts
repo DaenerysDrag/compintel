@@ -6,7 +6,7 @@
 // report a bug or idea in two clicks. A Rust-backed crash-log *file* can come
 // later if we want true on-disk persistence; this ships value now.
 
-export const APP_VERSION = "0.2.0";
+export const APP_VERSION = "0.3.0";
 export const REPO_SLUG = "DaenerysDrag/compintel";
 
 const CRASH_KEY = "compintel:lastCrash";

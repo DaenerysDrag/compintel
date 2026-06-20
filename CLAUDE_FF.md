@@ -110,7 +110,14 @@ Operator-only commands (`add_competitor`, `upload_similarweb_file`, `start_agent
 - New `src/components/StalenessBanner.tsx` — viewer-mode banner on Dashboard top; computes snapshot age from `generatedAt`; hidden if ≤2 days old & not exhausted; yellow ≤7d, red >7d or all-exhausted; calls out "backlogs exhausted — data won't change until new competitor added."
 - Edits: `useAgentData.ts` now exposes `generatedAt` (viewer=snapshot.generatedAt, operator=null); `Dashboard.tsx` renders banner + computes `allExhausted`; `App.tsx` sidebar gets FeedbackButton + version now from `APP_VERSION` (was hardcoded "v0.2.0"); `main.tsx` wraps ErrorBoundary + `initCrashCapture()`.
 - **Deferred to a follow-up:** true on-disk crash-log *file* via a Rust command (current impl persists to localStorage — survives reload, good enough for V2.1 first cut). Telemetry beyond crash capture not built yet.
-- **Next in V2.1:** Chunk 2 = CI Node-20→24 action bumps (code) + repo→org migration (needs user). Chunk 3 = signing+auto-update (needs Apple/Windows certs).
+**Chunk 1 COMMITTED 2026-06-20 as `7c1ad80` + pushed to main.**
+
+**Chunk 2 (part 1) DONE 2026-06-20 — CI Node-20→24 bump, commit `1d94ee9`, pushed to main.**
+- `.github/workflows/release.yml`: `actions/checkout@v4→v7`, `actions/setup-node@v4→v6`, `actions/cache@v4→v5` (looked up latest majors via `gh api repos/<a>/releases/latest`). `tauri-action@v0` + `rust-toolchain@stable` untouched (not Node-20 actions). Pushing main does NOT cut a release (release fires only on `v*` tag) — takes effect on the next tagged build.
+- **Chunk 2 (part 2) — DECIDED 2026-06-20: stay on `DaenerysDrag/compintel` for now, no org migration.** Revisit before wider rollout. (Tester access = add collaborators or hand out the installer files directly.)
+- **Chunk 3 — DECIDED 2026-06-20: defer signing + auto-update, ship unsigned.** Keep the Gatekeeper/SmartScreen ritual in INSTALL.md. Revisit before wider/external rollout. Needs Apple Developer ID (~$99/yr) + Windows cert when we do it.
+
+**→ With both blocked chunks deferred by user choice, V2.1's buildable content (A + C + CI bump) is COMPLETE. Closing out by cutting release `v0.3.0` (= "V2.1") so testers get the feedback button + staleness banner.**
 
 **Theme A — Capture tester learning (highest leverage right after shipping)**
 - In-app feedback button → prefilled GitHub issue / webhook / form (no return path for testers today)
