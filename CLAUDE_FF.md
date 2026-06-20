@@ -1,7 +1,11 @@
 # Compintel Frontend — Session Memory
 
-Last updated: 2026-06-07 (afternoon — second session of the day)
-Status: V0.2.0 shipped to GitHub as `DaenerysDrag/compintel` (private). CI building macOS .dmg + Windows .msi installers on tag `v0.2.0`. Run #27091324087 in progress at write time. All 6 tabs now viewer-mode aware (Dashboard + Competitors + History done last and this session; RunAgent has a clear "switch to Operator" guard). Frontend repo lives at: https://github.com/DaenerysDrag/compintel — separate from the office-tied agent codebase, which stays in the now.gg work area.
+Last updated: 2026-06-15
+Status: **V0.2.0 PUBLISHED** — live tester build for Windows + Intel Macs + Apple Silicon Macs at https://github.com/DaenerysDrag/compintel/releases/tag/v0.2.0. Universal macOS `.dmg` (Intel + Apple Silicon) + Windows `-setup.exe`, both unsigned. CI run #27553401742 succeeded; `gh release edit v0.2.0 --draft=false` published it. Snapshot URL is LIVE (HTTP 200, valid JSON) — viewer mode works end-to-end. Frontend repo: https://github.com/DaenerysDrag/compintel (private). **Next: ship the release URL + snapshot URL to 2–4 testers; onboard a new competitor so the snapshot shows fresh data (agent backlogs currently exhausted → snapshot frozen at 2026-05-29).**
+
+⚠️ CI maintenance note (from #27553401742 logs): `actions/checkout@v4`, `actions/setup-node@v4`, `actions/cache@v4` run on Node 20, which GitHub force-migrates to Node 24 on 2026-06-16. Builds still work but bump these action versions next time the workflow is touched.
+
+> **Memory rule (user, 2026-06-15):** ALWAYS update this file (`CLAUDE_FF.md`) AND the relevant `CLAUDE.md` every time we work on Compintel, before signaling done. See [[feedback-update-memory-each-session]].
 
 ---
 
@@ -95,7 +99,53 @@ Operator-only commands (`add_competitor`, `upload_similarweb_file`, `start_agent
 
 ---
 
+## V2.1 Candidate Backlog (drafted 2026-06-20)
+
+> "V2.1" = the next feature release after the published v0.2.0 (maps to `0.3.0` in code). **SCOPE LOCKED 2026-06-20: all four themes A + C + E + B.** Sequenced: (1) A feedback+crash + C staleness/health [pure code, no deps — start here], (2) E CI Node bump [code] then repo→org [needs user to create org + grant access], (3) B signing+auto-update [needs Apple Developer ID acct ~$99/yr + Windows cert — user procures; I wire it]. Order chosen so blocked-on-user items (org, Apple acct) run in parallel while I build the unblocked code.
+
+**Chunk 1 BUILT 2026-06-20 (Theme A feedback+crash + Theme C staleness) — pure frontend, no Rust changes, no new deps, `tsc` + `vite build` both clean. NOT committed yet.**
+- New `src/lib/diagnostics.ts` — `APP_VERSION`/`REPO_SLUG` single source of truth, `initCrashCapture()` (global error + unhandledrejection listeners → localStorage), `recordCrash`/`lastCrash`/`clearCrash`, `diagnosticsBlock()`, `feedbackIssueUrl(kind)` builds prefilled GitHub new-issue URL (labels omitted on purpose — they 404 the form for non-maintainers).
+- New `src/components/ErrorBoundary.tsx` — class boundary wrapping `<App/>` in `main.tsx`; catches render crashes, persists them, recoverable fallback with Reload / Report on GitHub / Copy diagnostics.
+- New `src/components/FeedbackButton.tsx` — sidebar "✎ Send feedback" → modal (Report a bug 🐞 / Suggest an idea 💡) → opens prefilled issue with auto-attached diagnostics (app version, OS, last crash).
+- New `src/components/StalenessBanner.tsx` — viewer-mode banner on Dashboard top; computes snapshot age from `generatedAt`; hidden if ≤2 days old & not exhausted; yellow ≤7d, red >7d or all-exhausted; calls out "backlogs exhausted — data won't change until new competitor added."
+- Edits: `useAgentData.ts` now exposes `generatedAt` (viewer=snapshot.generatedAt, operator=null); `Dashboard.tsx` renders banner + computes `allExhausted`; `App.tsx` sidebar gets FeedbackButton + version now from `APP_VERSION` (was hardcoded "v0.2.0"); `main.tsx` wraps ErrorBoundary + `initCrashCapture()`.
+- **Deferred to a follow-up:** true on-disk crash-log *file* via a Rust command (current impl persists to localStorage — survives reload, good enough for V2.1 first cut). Telemetry beyond crash capture not built yet.
+- **Next in V2.1:** Chunk 2 = CI Node-20→24 action bumps (code) + repo→org migration (needs user). Chunk 3 = signing+auto-update (needs Apple/Windows certs).
+
+**Theme A — Capture tester learning (highest leverage right after shipping)**
+- In-app feedback button → prefilled GitHub issue / webhook / form (no return path for testers today)
+- Crash & error capture → local log + optional one-click upload
+- Lightweight, privacy-aware telemetry (app version, OS, tab, run success/fail)
+
+**Theme B — Trust & frictionless install (the wider-rollout unlock; DEFER to V2.2)**
+- Code signing + notarization (Apple Developer ID ~$99/yr + Windows Authenticode) — kills the right-click-Open / SmartScreen ritual. Needs an Apple Dev account + budget decision.
+- Auto-update (Tauri updater plugin; universal `.app.tar.gz` already built for this) — depends on signing
+- Strip dev fallback path (`/Users/bluestacks/...`) before any non-dev distribution
+
+**Theme C — Make the data honest & fresh**
+- Staleness banner ("data is N days old") — snapshot frozen at 2026-05-29 while backlogs exhausted
+- Snapshot health card: last run / next scheduled / exhaustion state in viewer
+- "What changed since last snapshot" diff view
+
+**Theme D — Viewer parity & depth**
+- Finish Competitors + History viewer parity (known thin spot from v0.2.0)
+- Trends/charts via Recharts (already in stack, unused): weekly confirmed/blocked, backlog burndown
+- Search / filter / export across the game list
+
+**Theme E — Distribution hygiene**
+- Migrate repo to a now.gg org (private personal repo forces tester repo-access — real handoff friction)
+- CI: bump `actions/*` off Node 20 (GitHub deprecated 2026-06-16) + wire test gates (Vitest / cargo / Playwright)
+
+**Theme F — Agent contract (M5)**
+- `--json-status` structured events so the Jarvis screen reads typed events instead of parsing stdout
+
+**Recommended V2.1 cut:** A (feedback + crash capture) + C (staleness banner + snapshot health) + E (repo→org + CI Node bump). Defer B (signing/auto-update) to V2.2 — biggest UX win but costs money and premature at 2–4 testers.
+
+---
+
 ## What's Half-Done — Pick Up Here Next Session
+
+> **UPDATE 2026-06-15:** Snapshot URL is DONE (live, HTTP 200). v0.2.0 was PUBLISHED (universal `.dmg` + Windows `-setup.exe`). The "wait for CI / publish" notes below are now historical — see the 2026-06-15 worklog entry. Next active work = V2.1 (backlog above).
 
 ### Wait for CI, then publish the draft release
 
@@ -192,3 +242,4 @@ That writes the local copy + uploads to Drive + prints the public URL. Paste tha
 |---|---|
 | 2026-06-07 (morning) | V0.2.0 distribution-ready cut. Tasks 7–14 complete. Git initialized (`df2ecbf` on `main`). Tests + builds all clean. Not yet pushed to remote, not yet built into a tagged installer. Reminded by user to write this memory file; saved a feedback memory ([[feedback-update-memory-each-session]]) so this becomes a habit. |
 | 2026-06-07 (afternoon) | Wired Competitors + History + RunAgent tabs to `useAgentData` so viewer mode renders uniformly across the app. RunAgent now shows a "switch to Operator" guard in viewer mode. Updated all `karanmakol/compintel` references to `DaenerysDrag/compintel` since user moved this to their personal GitHub. User completed `gh auth login` as DaenerysDrag (had to use Mac Terminal directly — `gh auth login` is interactive and Claude Code's background bash can't handle it). Set per-repo git identity to `DaenerysDrag <177612664+DaenerysDrag@users.noreply.github.com>`, amended the 2 prior commits to use it, created private repo `DaenerysDrag/compintel`, pushed `main` + tag `v0.2.0`. CI run #27091324087 started; will produce `.dmg` + `.msi` as a draft release on the Releases page when complete. |
+| 2026-06-15 | **Universal Mac build + publish prep.** Verified prior CI (#27091324087) succeeded but the macOS `.dmg` was **Apple-Silicon-only** (`macos-latest` runners are M-series) — Intel MacBook testers were uncovered. User chose: add Intel support (universal) + publish now. Reworked `.github/workflows/release.yml`: macOS matrix entry now uses `args: "--target universal-apple-darwin"` + `rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"`, toolchain step gets `targets: ${{ matrix.rust_targets }}`. Corrected the `.msi` mismatch (NSIS target produces `-setup.exe`, no `.msi`) in both the workflow `releaseBody` and `INSTALL.md` (table + install + upgrade sections); macOS rows now say universal/Intel+Apple Silicon. Committed `d0af8f0` to `main`, deleted the old Apple-Silicon-only draft release + `v0.2.0` tag, re-cut `v0.2.0` on the new commit. CI run **#27553401742** triggered (universal build ≈ 18–25 min). Also confirmed snapshot URL is live (HTTP 200, valid state JSON) so viewer mode works once installed. **Next:** when CI green → verify `Compintel_0.2.0_universal.dmg` + `_x64-setup.exe` attached → `gh release edit v0.2.0 --draft=false` to publish. |

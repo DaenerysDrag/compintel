@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Card, Stat, Pill } from "../components/Card";
+import { StalenessBanner } from "../components/StalenessBanner";
 import { useAgentData } from "../lib/useAgentData";
 import { useSettingsStore } from "../store/settingsStore";
 
@@ -30,7 +31,7 @@ function BacklogBar({ remaining, gapSize }: { remaining: number | null; gapSize:
 }
 
 export default function Dashboard() {
-  const { summary, competitors, env, loading, error, fromCache, refresh } = useAgentData();
+  const { summary, competitors, env, loading, error, generatedAt, fromCache, refresh } = useAgentData();
   const mode = useSettingsStore((s) => s.mode);
 
   if (loading && !summary) {
@@ -53,9 +54,15 @@ export default function Dashboard() {
   const totalConfirmed = summary?.totalConfirmed ?? 0;
   const totalBlocked = summary?.totalBlocked ?? 0;
   const activeCount = competitors.filter((c) => !c.isExhausted && c.hasGapAnalysis).length;
+  const allExhausted = competitors.length > 0 && competitors.every((c) => c.isExhausted);
 
   return (
     <div className="h-full overflow-auto">
+      <StalenessBanner
+        generatedAt={generatedAt}
+        lastRunDate={summary?.date ?? null}
+        allExhausted={allExhausted}
+      />
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import logoUrl from "./assets/logo.png";
 import { useSettingsStore } from "./store/settingsStore";
 import { useSnapshotStore } from "./store/snapshotStore";
+import { FeedbackButton } from "./components/FeedbackButton";
+import { APP_VERSION } from "./lib/diagnostics";
 
 const Dashboard   = lazy(() => import("./tabs/Dashboard"));
 const RunAgent    = lazy(() => import("./tabs/RunAgent"));
@@ -130,8 +132,12 @@ export default function App() {
           </div>
         </div>
 
+        <div className="px-5 py-3 border-t border-cyan/10">
+          <FeedbackButton />
+        </div>
+
         <div className="px-5 py-3 border-t border-cyan/10 text-[10px] text-text-dim">
-          v0.2.0
+          v{APP_VERSION}
         </div>
       </aside>
 

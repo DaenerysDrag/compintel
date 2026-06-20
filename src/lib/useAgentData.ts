@@ -19,6 +19,8 @@ interface AgentData {
   env: EnvStatus | null;
   loading: boolean;
   error: string | null;
+  /** ISO timestamp the snapshot was generated (viewer mode); null in operator mode. */
+  generatedAt: string | null;
   /** True in viewer mode + snapshot data is from the offline cache. */
   fromCache: boolean;
   /** Refetch — viewer mode re-pulls from snapshot URL, operator re-reads disk. */
@@ -131,6 +133,7 @@ export function useAgentData(): AgentData {
       env: EMPTY_ENV,
       loading: snapshotLoading,
       error: snapshotError,
+      generatedAt: snapshot?.generatedAt ?? null,
       fromCache: snapshotFromCache,
       refresh: async () => {
         await loadSnapshot(snapshotUrl);
@@ -145,6 +148,7 @@ export function useAgentData(): AgentData {
     env: opEnv,
     loading: opLoading,
     error: opError,
+    generatedAt: null,
     fromCache: false,
     refresh: loadOperator,
   };
